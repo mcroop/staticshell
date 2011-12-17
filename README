@@ -1,0 +1,1 @@
+Requires editline (run `cabal install editline`)
