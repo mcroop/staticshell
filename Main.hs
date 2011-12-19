@@ -16,13 +16,8 @@ readEvalPrintLoop = do
     Nothing     -> return ()
     Just "exit" -> return ()
     Just line -> do EL.addHistory line
-                    execCmd $ Pipeline Nothing (toInv line) Nothing Fg
+                    execCmd $ buildCmd line
                     readEvalPrintLoop
-
-toInv :: String -> [Invocation]
-toInv line = [Invocation cmd args]
-  where
-    (_:cmd:args) = splitBy (\x -> (x == '"') || (x == ' ')) (show line)
 
 callbackWrapper :: IO () -> EL.Callback
 callbackWrapper f = \_ _ -> f >> return 0

@@ -1,87 +1,63 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module CmdParser where
 
 import HSH
 import Command
-import Data.Maybe
+import Data.Maybe (fromJust)
 import Data.Char
+import Data.List (intersperse)
 
---tokenize :: String -> [String]
---tokenize _ = undefined
+instance Show Invocation where
+  show (Invocation cmd args) = concat $ intersperse " " (cmd:args)
 
-splitBy :: (a -> Bool) -> [a] -> [[a]]
-splitBy _ [] = []
-splitBy f list = first : splitBy f (dropWhile f rest) where
-  (first, rest) = break f list
+instance ShellCommand Invocation where
+  fdInvoke (Invocation cmd args) = fdInvoke (cmd, args)
 
-{- TODO update to a real parser -}
---parseLine :: String -> UntypedCommand
---parseLine ""     = CmdNop
---parseLine s = CmdRun (UntypedCommandData com args)
---  where
---    (com:args) = splitBy (== ' ') s
-    
-{- need to change since Command has a new structure -}
---execCmd :: RunResult b => Command -> b
+instance ShellCommand [Invocation] where
+  fdInvoke []         env ichan = fdInvoke ("echo", ([]::[String])) env ichan
+  fdInvoke [inv]      env ichan = fdInvoke inv env ichan
+  fdInvoke (inv:invs) env ichan = fdInvoke (PipeCommand inv invs) env ichan
+
+
+
+{- 
+run a command
+-}
 execCmd :: Command -> IO ()
--- execCmd (PipeLine redirIn (Invocation cmd args) redirOut fgbg)
-execCmd (Pipeline redirIn [Invocation cmd args] redirOut _)
-  = runIO (cmd, args)
+execCmd (Pipeline redirIn [] redirOut fgbg) = return ()
+execCmd (Pipeline redirIn inv redirOut fgbg) = runIO inv
 
-{-
-execCmd CmdNop = return ()
-execCmd (CmdRun (UntypedCommandData com args)) = run (com, args)
-execCmd (CmdSeq (UntypedCommandData c1 a1) 
-               (UntypedCommandData c2 a2)) = run (c1, a1) >> run (c2, a2)
-execCmd (CmdPipe (UntypedCommandData c1 a1) 
-                (UntypedCommandData c2 a2)) = run $ (c1, a1) -|- run (c2, a2)
+
+
+buildCmd :: String -> Command
+buildCmd s = pipeSplit
+  where
+    toks = doTokenize s
+    pipeSplit = foldl aux (Pipeline Nothing [] Nothing Fg) toks
+    aux (Pipeline i invs o fgbg) x 
+      | x == "|"  = Pipeline i (invs ++ [(Invocation "" [])]) o fgbg
+      | otherwise = case invs of
+        [] -> Pipeline i [(Invocation x [])] o fgbg
+        _  -> case (last invs) of
+          (Invocation "" as) -> Pipeline i [(Invocation x as)] o fgbg
+          (Invocation c  as) -> Pipeline i [(Invocation c (as ++ [x]))] o fgbg
+
+{- 
+an accumulator-style tokenizing helper function
+
+meant to be called through doTokenize 
 -}
-
-{-
-class (Show a) => ShellCommand a where
-    {- | Invoke a command. -}
-    fdInvoke :: a               -- ^ The command
-             -> Environment     -- ^ The environment
-             -> Channel         -- ^ Where to read input from
-             -> IO (Channel, [InvokeResult]) -- ^ Returns an action that, when evaluated, waits for the process to finish and returns an exit code.
--}
-
---toShellCommand :: ShellCommand b => Command -> b
---toShellCommand (Pipeline Nothing (Invocation "" _) Nothing _) = return ()
--- toShellCommand (Pipeline Nothing (Invocation cmd args) 
-
-{-
-type TypedCommand = Command TypedCommandData
-type UntypedCommand = Command UntypedCommandData
--}
-                                   
-{-
-instance ShellCommand (Command TypedCommandData) where
-  fdInvoke _ _ _ = return ()
-
-instance ShellCommand (Command UntypedCommandData) where
-  fdInvoke _ _ _ = return ()
--}
-
-tokenize :: Maybe Char -> -- previous character
+tokenize' :: Maybe Char -> -- previous character
             Maybe Char -> -- current character
             Bool ->       -- quoted
             String ->     -- current token
             [String] ->   -- accumulated tokens
             String ->     -- remaining input
             [String]      -- result
-{-tokenize _           Nothing     True  _   _    _       = undefined
-tokenize _           Nothing     _     tok toks _       = toks ++ [tok]
-tokenize (Just '\\') (Just '"')  qu    tok toks (r:rem) = tokenize (Just '"') (Just r) qu    (tok++['"'])  toks          rem
-tokenize _           (Just '"')  True  tok toks (r:rem) = tokenize (Just '"') (Just r) False tok           toks          rem
-tokenize _           (Just '"')  _     tok toks (r:rem) = tokenize (Just '"') (Just r) True  tok           toks          rem
-tokenize _           (Just ' ')  True  tok toks (r:rem) = tokenize (Just ' ') (Just r) True  (tok++[' '])  toks          rem
-tokenize _           (Just ' ')  _     tok toks (r:rem) = tokenize (Just ' ') (Just r) False ""            (toks++[tok]) rem
-tokenize (Just '\\') (Just '\\') qu    tok toks (r:rem) = tokenize (Just 'a') (Just r) qu    (tok++['\\']) toks          rem
-tokenize pr          (Just cr)   qu    tok toks []      = tokenize (Just cr)  Nothing  qu    (tok++[cr])   toks          []
-tokenize _           (Just cr)   qu    tok toks (r:rem) = tokenize (Just cr)  (Just r) qu    (tok++[cr])   toks          rem-}
-tokenize pr Nothing True tok toks []      = undefined
-tokenize pr Nothing _    tok toks []      = if tok == "" then toks else toks ++ [tok]
-tokenize pr cr      qu   tok toks (r:rem) = tokenize pr' cr' qu' tok' toks' rem'
+tokenize' pr Nothing True tok toks []      = undefined
+tokenize' pr Nothing _    tok toks []      = if tok == "" then toks else toks ++ [tok]
+tokenize' pr cr      qu   tok toks (r:rem) = tokenize' pr' cr' qu' tok' toks' rem'
   where
     pr'   = if pr == (Just '\\') && cr == (Just '\\') 
               then (Just 'a') 
@@ -93,7 +69,8 @@ tokenize pr cr      qu   tok toks (r:rem) = tokenize pr' cr' qu' tok' toks' rem'
     qu'   = if cr == (Just '"') && not (pr == (Just '\\'))
               then not qu
             else qu
-    tok'  = if cr == (Just '"') && not (pr == (Just '\\'))
+    tok'  = if (cr == (Just '"') && not (pr == (Just '\\'))) || 
+               (cr == (Just '\\') && not (pr == (Just '\\')))
               then tok 
             else if not qu && cr == (Just ' ') 
                    then "" 
@@ -104,15 +81,25 @@ tokenize pr cr      qu   tok toks (r:rem) = tokenize pr' cr' qu' tok' toks' rem'
               toks
     rem'  = rem
 
+{- 
+tokenize a string, triming whitespace.
 
+doTokenize "hello world" == ["hello", "world"]
+
+whitespace within quotation marks does not split tokens
+
+doTokenize "this \"is a quote\"" == ["this", "is a quote"]
+
+quoted string without a preceding/following space are included with the
+preceding/following token
+
+doTokenize "hello wo\"a whole new\"rld" == ["hello", "woa whole newrld"]
+
+-}
 doTokenize :: String -> [String]
 doTokenize []  = []
 doTokenize [c] = [[c]]
-doTokenize str = tokenize Nothing (Just s) False "" [] ss 
+doTokenize str = tokenize' Nothing (Just s) False "" [] ss 
   where
-    (s:ss) = str
+    (s:ss) = str ++ "  " -- the kludgey way to fix tokenizer
 
-trim      :: String -> String
-trim      = f . f
-  where 
-    f = reverse . dropWhile isSpace
