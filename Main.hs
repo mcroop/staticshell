@@ -27,11 +27,12 @@ stuffStr s = mapM (EL.stuffChar) s >> return ()
 tabComplete :: IO ()
 tabComplete = do
   putEmpty
-  buf <- getLineBuffer
-  let x80 = (take 80) . repeat
-  putStrLn $ "Help for the function '" ++ (head $ (splitWs buf ++ [""])) ++ "'."
+  bufFull <- getLineBuffer
+  point <- getPoint
+  let buf = take point bufFull
+  putStrLn $ "Help for the function '" ++ buf ++ "'."
   putEmpty
-  stuffStr "[added-stuff]"
+  stuffStr "[]"
   putStrLn "completion 1\tcompletion 2"
   EL.redisplay
 
