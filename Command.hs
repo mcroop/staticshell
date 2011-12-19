@@ -32,7 +32,6 @@ data TypedCommandData = TypedCommandData String [ArgType]
 data FgBg = Fg | Bg
 
 data Command a = CmdPipe (Command a) (Command a) -- a | b
-               | CmdSeq (Command a) (Command a)  -- a; b
                | CmdNop
                | CmdRun FgBg a
                | CmdStdinFile String -- place at beginning of pipe
