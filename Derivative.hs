@@ -1,6 +1,7 @@
 module Derivative where
 
 import Command
+import Data.List.Utils
 
 bool2arg :: Bool -> ArgType
 bool2arg True = ATEmptyStr
@@ -43,13 +44,20 @@ atplus x y = atplus' (remdoc x) (remdoc y) where
 atsum :: [ArgType] -> ArgType
 atsum = foldl atplus ATFail
 
-derivative :: ArgType -> Char -> ArgType
+data CharWS = Char Char | WS deriving Eq
+
+makeWS :: Char -> CharWS
+makeWS ' ' = WS
+makeWS '\t' = WS
+makeWS c = Char c
+
+derivative :: ArgType -> CharWS -> ArgType
 derivative ATInt a = ATFail --TODO
 derivative ATString a = ATFail --TODO
 derivative ATFile a = derivative ATString a --TODO
 derivative (ATToken "") a = ATFail
-derivative (ATToken (c:"")) a = bool2arg (a == c)
-derivative (ATToken (c:cs)) a = if a == c then ATToken cs else ATFail
+derivative (ATToken (c:"")) a = bool2arg (a == (makeWS c))
+derivative (ATToken (c:cs)) a = if a == (makeWS c) then ATToken cs else ATFail
 derivative (ATEither args) a = atsum (map (\arg -> derivative arg a) args)
 derivative (ATSet args) a = derivative (ATList (ATEither args)) a --TODO
 derivative (ATList arg) a = cons (derivative arg a) (ATList arg)
@@ -61,5 +69,5 @@ derivative (ATDocumented arg help) a = ATDocumented (derivative arg a) help
 derivative ATEmptyStr _ = ATFail
 derivative ATFail _ = ATFail
 
-derivatives :: ArgType -> String -> ArgType
-derivatives arg = foldl derivative arg
+derivatives :: ArgType -> [String] -> ArgType
+derivatives arg s = foldl derivative arg $ join [WS] (map (map Char) s)
