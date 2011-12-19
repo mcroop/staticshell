@@ -2,5 +2,5 @@ module CmdParser where
 
 import Command
 
-parseLine :: String -> [UntypedCommand]
+parseLine :: String -> [Command]
 parseLine _ = []

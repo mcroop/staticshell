@@ -25,18 +25,12 @@ schema = ATEither [
                  ATDocumented (ATToken "-v") "Display non-printing characters"],
           ATList ATFile]]
 
--- progname args_without_progname
-data UntypedCommandData = UntypedCommandData String [String]
-data TypedCommandData = TypedCommandData String [ArgType]
-
 data FgBg = Fg | Bg
 
-data Command a = CmdPipe (Command a) (Command a) -- a | b
-               | CmdRun FgBg a
-               | CmdStdinFile String -- place at beginning of pipe
-               | CmdStdoutFile String -- place at end of pipe
+-- progname args_without_progname
+data Invocation = Invocation String [String]
+
+--                       redirect in    pipeline     redirect out
+data Command = Pipeline (Maybe String) [Invocation] (Maybe String) FgBg
 
 -- TODO stderr? HSH doesn't support it anyway though
-
-type TypedCommand = Command TypedCommandData
-type UntypedCommand = Command UntypedCommandData
