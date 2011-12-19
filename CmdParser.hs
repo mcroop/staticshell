@@ -50,3 +50,7 @@ instance ShellCommand (Command TypedCommandData) where
 instance ShellCommand (Command UntypedCommandData) where
   fdInvoke _ _ _ = return ()
 -}
+
+parseLine :: String -> [Command]
+parseLine _ = []
+
