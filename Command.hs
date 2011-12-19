@@ -1,16 +1,21 @@
 module Command where
 
-data ArgType = ATInt | ATString | ATFile | ATInetAddr | ATRegex
+data ArgType = ATInt | ATString | ATFile
              | ATToken String -- require the token, return (). the token should end in " " to require whitespace
-             | ATMaybe ArgType
              | ATEither [ArgType]
              | ATSet [ArgType] -- options in any order
              | ATList ArgType
              | ATSeq [ArgType]
              | ATDocumented ArgType String
+             | ATEmptyStr
+             | ATFail
+  deriving (Show, Eq)
 
 tokWS :: ArgType
 tokWS = ATToken " "
+
+atMaybe :: ArgType -> ArgType
+atMaybe t = ATEither [ATEmptyStr, t]
 
 data FgBg = Fg | Bg
 

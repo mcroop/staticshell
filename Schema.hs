@@ -26,8 +26,8 @@ schema = ATEither [
       ATDocumented (ATEither [ATToken "-i ", ATToken "--ignore-case "]) "Ignore case differences in file contents.",
       ATDocumented (ATEither [ATToken "-w ", ATToken "--ignore-all-space "]) "Ignore all white space.",
       ATDocumented (ATEither [ATToken "-u ",
-                              ATSeq [ATToken "-U", ATMaybe tokWS, ATInt, tokWS],
-                              ATSeq [ATToken "--unified", ATMaybe (ATSeq [ATToken "=", ATInt]), tokWS]])
+                              ATSeq [ATToken "-U", atMaybe tokWS, ATInt, tokWS],
+                              ATSeq [ATToken "--unified", atMaybe (ATSeq [ATToken "=", ATInt]), tokWS]])
                     "Output NUM (default 3) lines of unified context."
     ],
     ATList ATFile]]
