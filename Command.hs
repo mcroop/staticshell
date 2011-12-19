@@ -18,11 +18,14 @@ atMaybe :: ArgType -> ArgType
 atMaybe t = ATEither [ATEmptyStr, t]
 
 data FgBg = Fg | Bg
+  deriving Show
 
 -- progname args_without_progname
 data Invocation = Invocation String [String]
+  deriving Show
 
 --                       redirect in    pipeline     redirect out
 data Command = Pipeline (Maybe String) [Invocation] (Maybe String) FgBg
+  deriving Show
 
 -- TODO stderr? HSH doesn't support it anyway though

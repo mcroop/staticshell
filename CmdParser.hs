@@ -8,8 +8,17 @@ import Data.Maybe (fromJust)
 import Data.Char
 import Data.List (intersperse)
 
-instance Show Invocation where
+{- instance Show Invocation where
   show (Invocation cmd args) = concat $ intersperse " " (cmd:args)
+  
+instance Show Command where
+  show (Pipeline redirIn inv redirOut fgbg)
+    = concat $ intersperse " " ["Pipeline", 
+                                (show redirIn),
+                                (show inv),
+                                (show redirOut),
+                                (show fgbg)]
+-}
 
 instance ShellCommand Invocation where
   fdInvoke (Invocation cmd args) = fdInvoke (cmd, args)
@@ -40,8 +49,8 @@ buildCmd s = pipeSplit
       | otherwise = case invs of
         [] -> Pipeline i [(Invocation x [])] o fgbg
         _  -> case (last invs) of
-          (Invocation "" as) -> Pipeline i [(Invocation x as)] o fgbg
-          (Invocation c  as) -> Pipeline i [(Invocation c (as ++ [x]))] o fgbg
+          (Invocation "" as) -> Pipeline i ((init invs) ++ [(Invocation x as)]) o fgbg
+          (Invocation c  as) -> Pipeline i ((init invs) ++ [(Invocation c (as ++ [x]))]) o fgbg
 
 {- 
 an accumulator-style tokenizing helper function
