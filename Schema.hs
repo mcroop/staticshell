@@ -2,8 +2,8 @@ module Schema where
 
 import Command
 
-schema :: ArgType
-schema = ATEither [
+programSchema :: ArgType
+programSchema = ATEither [
   ATDocumented (ATSeq [
     ATToken "echo ",
     ATSet [
@@ -42,3 +42,10 @@ schema = ATEither [
     ],
     ATList ATFile]) "Compare files line by line"
   ]
+
+schema :: ArgType
+schema = ATSeq [
+  programSchema,
+  atMaybe (ATDocumented (ATSeq [ATToken "< ", ATFile]) "Read stdin from file"),
+  ATList (ATSeq [ATDocumented (ATToken "| ") "Pipeline", programSchema]),
+  atMaybe (ATDocumented (ATSeq [ATToken "> ", ATFile]) "Write stdout to file")]
