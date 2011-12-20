@@ -2,7 +2,7 @@
 
 module Main where
 
--- import Data.List
+import Data.List
 -- import Data.String.Utils
 import Control.Concurrent
 
@@ -115,6 +115,11 @@ doTokenizeWithEndWS buf = reverse $ case reverse (doTokenize (buf ++ "!")) of
   [] -> []
   (h : t) -> (init h) : t
 
+commonPrefix :: Eq a => [[a]] -> [a]
+commonPrefix as = if any null as then []
+	     	  else case (unify $ map head as) of
+		       Nothing -> []
+		       Just a -> a : (commonPrefix $ map tail as)
 
 tabComplete :: IO ()
 tabComplete = do
@@ -124,13 +129,16 @@ tabComplete = do
   let buf = take point bufFull
   let tokenized = doTokenizeWithEndWS buf
   let derived = derivatives schema tokenized
+  let lasttok = last $ "":tokenized
   putStrLn $ docs Page $ fst.upToWS $ derived
-  -- _ <- if (requiredFilenameCompletion derived) then
-  --   do {s <- filenameCompletionFunction (last $ "":tokenized); putStrLn $ show s}
-  --   else return ()
-  stuffStr $ requiredNextString derived
+  prefix <- if (requiredFilenameCompletion derived) then
+    do {s <- filenameCompletionFunction lasttok;
+        putStrLn $ concat $ intersperse "\n" s;
+	return $ drop (length lasttok) (commonPrefix s)}
+    else return $ requiredNextString derived
+  stuffStr prefix
   EL.redisplay
-  EL.onNewLine
+  EL.resetLineState
 
 main :: IO ()
 main = do
