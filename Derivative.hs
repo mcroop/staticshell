@@ -34,12 +34,15 @@ makeWS ' '  = WS
 makeWS '\t' = WS
 makeWS c    = Char c
 
+stringLikeDerivative :: (Char -> Bool) -> ArgType -> ArgType
+stringLikeDerivative f defaultArg = if (f '<') || (f '>') || (f '&') || (f '|') then ATFail
+                                    else if (not (f ' ')) then atMaybe defaultArg
+                                    else ATEmptyStr
+
 derivative :: (Char -> Bool) -> ArgType -> ArgType
 derivative f ATInt            = if (any f "0123456789") then atMaybe ATInt else ATFail
-derivative f ATString         = if (f '<') || (f '>') || (f '&') || (f '|') then ATFail
-                                else if (not (f ' ')) then atMaybe ATString
-                                else ATEmptyStr
-derivative f ATFile           = derivative f ATString --TODO
+derivative f ATString         = stringLikeDerivative f ATString
+derivative f ATFile           = stringLikeDerivative f ATFile
 derivative f (ATToken "")     = ATFail
 derivative f (ATToken (c:"")) = bool2arg (f c)
 derivative f (ATToken (c:cs)) = if (f c) then ATToken cs else ATFail

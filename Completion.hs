@@ -69,6 +69,7 @@ unify (a:as) = if all (a==) as then Just a else Nothing
 data AutocompletionChar = DefiniteChar Char
                         | StopCompletion
                         | ContinueCompletion
+                        | FilenameCompletion
   deriving (Eq, Show)
   
 
@@ -81,9 +82,15 @@ requiredNextChar (ATEither args) = case filter (ContinueCompletion/=) $ map requ
   (a:as) -> if all (a==) as then a else StopCompletion
 requiredNextChar (ATSeq (a:as)) = requiredNextChar a
 requiredNextChar (ATDocumented arg s) = requiredNextChar arg
+requiredNextChar ATFile = FilenameCompletion
 requiredNextChar _ = ContinueCompletion
 
 requiredNextString :: ArgType -> String
 requiredNextString arg = case (requiredNextChar arg) of
   DefiniteChar c -> c : (requiredNextString $ derivativeWRTChar (makeWS c) arg)
   _ -> []
+
+requiredFilenameCompletion :: ArgType -> Bool
+requiredFilenameCompletion arg = case (requiredNextChar arg) of
+  FilenameCompletion -> True
+  _ -> False

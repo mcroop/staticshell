@@ -122,9 +122,13 @@ tabComplete = do
   bufFull <- getLineBuffer
   point <- getPoint
   let buf = take point bufFull
-  let derived = derivatives schema $ doTokenizeWithEndWS buf
-  stuffStr $ requiredNextString derived
+  let tokenized = doTokenizeWithEndWS buf
+  let derived = derivatives schema tokenized
   putStrLn $ docs Page $ fst.upToWS $ derived
+  -- _ <- if (requiredFilenameCompletion derived) then
+  --   do {s <- filenameCompletionFunction (last $ "":tokenized); putStrLn $ show s}
+  --   else return ()
+  stuffStr $ requiredNextString derived
   EL.redisplay
 
 main :: IO ()
