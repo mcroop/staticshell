@@ -37,13 +37,10 @@ buildCmd :: String -> Command
 buildCmd s = pipeSplit
   where
     toks' = doTokenize s
-    lTok  | toks' == [] = ""
-          | otherwise   = last toks'
-    toks  | lTok == "&" = init toks'
-          | otherwise   = toks'
-    fb    | lTok == "&" = Bg
-          | otherwise   = Fg
-    pipeSplit = foldl aux (Pipeline Nothing [] Nothing fb) toks
+    (fb,toks'')   = stripFgbgTok toks' 
+    (inp,toks''') = stripRedirInToks toks'' []
+    (outp,toks)   = stripRedirOutToks toks''' []
+    pipeSplit = foldl aux (Pipeline inp [] outp fb) toks
     aux (Pipeline i invs o fgbg) x 
       | x == "|"  = Pipeline i (invs ++ [(Invocation "" [])]) o fgbg
       | otherwise = case invs of
@@ -72,7 +69,7 @@ tokenize' :: Maybe Char -> -- previous character
              [String] ->   -- accumulated tokens
              String ->     -- remaining input
              [String]      -- result
-tokenize' pr Nothing True tok toks [] = undefined -- we shouldn't hit this
+tokenize' pr Nothing True tok toks [] = ["echo","unmatched quote"] -- we shouldn't hit this
 tokenize' pr Nothing _    tok toks []      
   = if tok == "" then toks else toks ++ [tok]
 tokenize' pr cr      qu   tok toks (r:rem) 
@@ -122,3 +119,24 @@ doTokenize str = tokenize' Nothing (Just s) False "" [] ss
   where
     (s:ss) = str ++ "  " -- the kludgey way to fix tokenizer
 
+stripFgbgTok :: [String] -> (FgBg, [String])
+stripFgbgTok []   = (Fg, [])
+stripFgbgTok toks = case (last toks) of
+                      "&" -> (Bg, init toks)
+                      _   -> (Fg, toks)
+
+--                    rem         acc         redirIn        toks
+stripRedirInToks :: [String] -> [String] -> (Maybe String, [String])
+stripRedirInToks []           acc = (Nothing, acc)
+stripRedirInToks [tok]        acc = (Nothing, acc ++ [tok])
+stripRedirInToks (t1:t2:toks) acc | t1 == "<<" = (Just t2, acc ++ toks)
+                                  | otherwise  = stripRedirInToks (t2:toks)
+                                                                  (acc ++ [t1])
+
+--                     rem         acc         redirOut       toks
+stripRedirOutToks :: [String] -> [String] -> (Maybe String, [String])
+stripRedirOutToks []           acc = (Nothing, acc)
+stripRedirOutToks [tok]        acc = (Nothing, acc ++ [tok])
+stripRedirOutToks (t1:t2:ts) acc | t1 == ">>" = (Just t2, acc ++ ts)
+                                 | otherwise  = stripRedirOutToks (t2:ts)
+                                                                  (acc ++ [t1])
