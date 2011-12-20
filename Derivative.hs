@@ -16,11 +16,6 @@ nullable (ATList arg) = True
 nullable (ATDocumented arg _) = nullable arg
 nullable _ = False
 
-remdoc :: ArgType -> ArgType
-remdoc (ATDocumented ATFail _) = ATFail
-remdoc (ATDocumented ATEmptyStr _) = ATEmptyStr
-remdoc x = x
-
 cons :: ArgType -> ArgType -> ArgType
 cons x y = cons' (remdoc x) (remdoc y) where
   cons' ATEmptyStr x          = x
@@ -31,18 +26,6 @@ cons x y = cons' (remdoc x) (remdoc y) where
   cons' (ATSeq a)  b          = ATSeq (a ++ [b])
   cons' a          (ATSeq b)  = ATSeq (a : b)
   cons' a          b          = ATSeq [a, b]
-
-atplus :: ArgType -> ArgType -> ArgType
-atplus x y = atplus' (remdoc x) (remdoc y) where
-  atplus' ATFail       x            = x
-  atplus' x            ATFail       = x
-  atplus' (ATEither a) (ATEither b) = ATEither (a ++ b)
-  atplus' (ATEither a) b            = ATEither (a ++ [b])
-  atplus' a            (ATEither b) = ATEither (a : b)
-  atplus' a            b            = ATEither [a, b]
-
-atsum :: [ArgType] -> ArgType
-atsum = foldl atplus ATFail
 
 data CharWS = Char Char | WS deriving Eq
 
@@ -87,7 +70,7 @@ upToWS ATString = (ATString, True)
 upToWS ATFile = (ATFile, True)
 upToWS (ATToken t) = if (any (==' ') t) then
   (ATToken (head $ (splitWs t) ++ [""]), True) else (ATToken t, False)
-upToWS (ATEither args) = (ATEither (map fst res), any id (map snd res)) where
+upToWS (ATEither args) = (atsum (map fst res), any id (map snd res)) where
   res = map upToWS args
 upToWS (ATSeq []) = (ATEmptyStr, False)
 upToWS (ATSeq (a:as)) = case (upToWS a) of
