@@ -45,16 +45,21 @@ readEvalPrintLoop = do
       readEvalPrintLoop
                         
 {- exception handlers -}
+{- Handle command exceptions -}
 ueHandler :: IOError -> IO (Either () ThreadId)
 ueHandler e     = do 
                     putStrLn $ "Exception raised: " ++ (show e)
                     return $ Left ()
 
+{- Handle the SIGINT interrupt to the shell itself -}
 shellIntHandler :: Handler
 shellIntHandler = Catch (return ())
 
+{- Handle the SIGINT interrupt to a process -}
 cmdIntHandler :: Handler
 cmdIntHandler   = Catch (return () >> readEvalPrintLoop)
+
+
 
 callbackWrapper :: IO () -> EL.Callback
 callbackWrapper f = \_ _ -> f >> return 0
@@ -62,8 +67,11 @@ callbackWrapper f = \_ _ -> f >> return 0
 {- 
 run a command
 
-it's still pretty ugly right now, the fix is a ShellCommand instance
-for sequences of ShellCommands that simply pipes them all together
+It's still pretty ugly right now, the fix is a ShellCommand instance
+for sequences of ShellCommands that simply pipes them all together,
+but piping isn't the only thing we might want to do with a list
+of Commands (we might want to run them all sequentially), so for now
+this will have to do.
 -}
 execCmd :: Command -> IO (Either () ThreadId)
 execCmd (Pipeline _       []  _       _) = return $ Left ()
@@ -121,6 +129,7 @@ commonPrefix as = if any null as then []
 		       Nothing -> []
 		       Just a -> a : (commonPrefix $ map tail as)
 
+{- tab complete what is currently in the terminal buffer -}
 tabComplete :: IO ()
 tabComplete = do
   putEmpty
@@ -140,6 +149,9 @@ tabComplete = do
   EL.redisplay
   EL.resetLineState
 
+{- 
+main loop, accept input and wait for either tab (complete) or enter (exec) 
+-}
 main :: IO ()
 main = do
   EL.bindKey '!' (\_ _ -> do {return 0}) -- I'm not sure why this is necessary

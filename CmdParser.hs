@@ -119,12 +119,18 @@ doTokenize str = tokenize' Nothing (Just s) False "" [] ss
   where
     (s:ss) = str ++ "  " -- the kludgey way to fix tokenizer
 
+{- 
+check for a final ampersand token and if so, indicate Bg and remove the token
+-}
 stripFgbgTok :: [String] -> (FgBg, [String])
 stripFgbgTok []   = (Fg, [])
 stripFgbgTok toks = case (last toks) of
                       "&" -> (Bg, init toks)
                       _   -> (Fg, toks)
 
+{-
+strip out the first Input redirect token pair that we can find
+-}
 --                    rem         acc         redirIn        toks
 stripRedirInToks :: [String] -> [String] -> (Maybe String, [String])
 stripRedirInToks []           acc = (Nothing, acc)
@@ -133,6 +139,9 @@ stripRedirInToks (t1:t2:toks) acc | t1 == "<" = (Just t2, acc ++ toks)
                                   | otherwise  = stripRedirInToks (t2:toks)
                                                                   (acc ++ [t1])
 
+{-
+strip out the first Output redirect token pair that we can find
+-}
 --                     rem         acc         redirOut       toks
 stripRedirOutToks :: [String] -> [String] -> (Maybe String, [String])
 stripRedirOutToks []           acc = (Nothing, acc)
