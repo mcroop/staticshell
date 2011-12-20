@@ -23,6 +23,7 @@ schema = ATEither [
       ATDocumented (ATToken "-u ") "Disable output buffering",
       ATDocumented (ATToken "-v ") "Display non-printing characters"],
     ATList ATFile]) "Concatenate and print files",
+  ATSeq [ATToken "QQ ", ATInt, ATString, ATInt, ATString],
   ATDocumented (ATSeq [
     ATToken "diff ",
     ATSet [
