@@ -130,6 +130,7 @@ tabComplete = do
   --   else return ()
   stuffStr $ requiredNextString derived
   EL.redisplay
+  EL.onNewLine
 
 main :: IO ()
 main = do
