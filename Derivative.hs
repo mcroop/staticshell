@@ -95,7 +95,7 @@ upToWS (ATSeq (a:as)) = case (upToWS a) of
   (a', False) -> (cons a' rest, rest_res) where
     (rest, rest_res) = upToWS (ATSeq as)
 upToWS (ATList a) = case (upToWS a) of
-  (a', True) -> (a', True)
+  (a', True) -> (a', False)
   (a', False) -> (ATList a, False)
 upToWS (ATSet a) = upToWS (ATList (ATEither a))
 upToWS (ATDocumented a s) = (ATDocumented (fst res) s, snd res) where
