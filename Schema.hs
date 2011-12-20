@@ -39,5 +39,5 @@ schema = ATEither [
                                      tokWS]])
                     "Output NUM (default 3) lines of unified context."
     ],
-    ATList ATFile]) "Write arguments to the standard output"
+    ATList ATFile]) "Compare files line by line"
   ]
