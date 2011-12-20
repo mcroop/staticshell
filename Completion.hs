@@ -60,14 +60,24 @@ unify :: Eq a => [a] -> Maybe a
 unify [] = Nothing
 unify (a:as) = if all (a==) as then Just a else Nothing
 
-requiredNextChar :: ArgType -> Maybe Char
-requiredNextChar (ATToken (x:xs)) = Just x
-requiredNextChar (ATEither args) = join $ unify $ map requiredNextChar args
+data AutocompletionChar = DefiniteChar Char
+                        | StopCompletion
+                        | ContinueCompletion
+  deriving (Eq, Show)
+  
+
+
+
+requiredNextChar :: ArgType -> AutocompletionChar
+requiredNextChar (ATToken (x:xs)) = DefiniteChar x
+requiredNextChar (ATEither args) = case filter (ContinueCompletion/=) $ map requiredNextChar args of
+  [] -> ContinueCompletion
+  (a:as) -> if all (a==) as then a else StopCompletion
 requiredNextChar (ATSeq (a:as)) = requiredNextChar a
 requiredNextChar (ATDocumented arg s) = requiredNextChar arg
-requiredNextChar _ = Nothing
+requiredNextChar _ = ContinueCompletion
 
 requiredNextString :: ArgType -> String
 requiredNextString arg = case (requiredNextChar arg) of
-  Nothing -> []
-  Just c -> c : (requiredNextString $ derivativeWRTChar (makeWS c) arg)
+  DefiniteChar c -> c : (requiredNextString $ derivativeWRTChar (makeWS c) arg)
+  _ -> []
