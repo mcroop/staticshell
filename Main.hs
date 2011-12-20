@@ -59,6 +59,12 @@ putEmpty = putStrLn ""
 stuffStr :: String -> IO ()
 stuffStr s = mapM (EL.stuffChar) s >> return ()
 
+doTokenizeWithEndWS :: String -> [String]
+doTokenizeWithEndWS buf = reverse $ case reverse (doTokenize (buf ++ "!")) of
+  [] -> []
+  (h : t) -> (init h) : t
+
+
 tabComplete :: IO ()
 tabComplete = do
   putEmpty
@@ -66,7 +72,7 @@ tabComplete = do
   point <- getPoint
   let buf = take point bufFull
   --stuffStr "[]"
-  putStrLn $ docs Page $ derivatives schema $ doTokenize buf
+  putStrLn $ docs Page $ fst.upToWS $ derivatives schema $ doTokenizeWithEndWS buf
   EL.redisplay
 
 main :: IO ()
