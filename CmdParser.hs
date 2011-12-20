@@ -4,9 +4,11 @@ module CmdParser where
 
 import HSH
 import Command
+
 import Data.Maybe (fromJust)
 import Data.Char
 import Data.List (intersperse)
+import Control.Concurrent
 
 {- instance Show Invocation where
   show (Invocation cmd args) = concat $ intersperse " " (cmd:args)
@@ -20,30 +22,28 @@ instance Show Command where
                                 (show fgbg)]
 -}
 
+{- invoke a single command (invocation) -}
 instance ShellCommand Invocation where
   fdInvoke (Invocation cmd args) = fdInvoke (cmd, args)
 
+{- make us able to pipe multiple operations together as ShellCommands -}
 instance ShellCommand [Invocation] where
   fdInvoke []         env ichan = fdInvoke ("echo", ([]::[String])) env ichan
   fdInvoke [inv]      env ichan = fdInvoke inv env ichan
   fdInvoke (inv:invs) env ichan = fdInvoke (PipeCommand inv invs) env ichan
 
-
-
-{- 
-run a command
--}
-execCmd :: Command -> IO ()
-execCmd (Pipeline redirIn [] redirOut fgbg) = return ()
-execCmd (Pipeline redirIn inv redirOut fgbg) = runIO inv
-
-
-
+{- build a command out of a String -}
 buildCmd :: String -> Command
 buildCmd s = pipeSplit
   where
-    toks = doTokenize s
-    pipeSplit = foldl aux (Pipeline Nothing [] Nothing Fg) toks
+    toks' = doTokenize s
+    lTok | toks' == [] = ""
+         | otherwise   = last toks'
+    toks | lTok == "&" = init toks'
+         | otherwise = toks'
+    fb | lTok == "&" = Bg
+       | otherwise   = Fg
+    pipeSplit = foldl aux (Pipeline Nothing [] Nothing fb) toks
     aux (Pipeline i invs o fgbg) x 
       | x == "|"  = Pipeline i (invs ++ [(Invocation "" [])]) o fgbg
       | otherwise = case invs of

@@ -4,24 +4,52 @@ module Main where
 
 import Data.List
 import Data.String.Utils
+import Control.Concurrent
 
 import System.Console.Readline as EL
+import System.Posix.Signals
 import CmdParser
 import Command
+import HSH
+
 
 readEvalPrintLoop :: IO ()
 readEvalPrintLoop = do
+  installHandler sigINT shellIntHandler Nothing
   maybeLine <- EL.readline ">> "
   case maybeLine of 
     Nothing     -> return ()
     Just "exit" -> return ()
     Just line -> do EL.addHistory line
-                    execCmd $ buildCmd line
+                    eitherTid <- (execCmd $ buildCmd line) `catch` ueHandler 
+                    tid <- case eitherTid of
+                      Left () -> myThreadId
+                      Right tid' -> do 
+                                      installHandler sigINT cmdIntHandler Nothing
+                                      return tid'
+                    putStrLn $ "ThreadId: " ++ (show tid)
                     readEvalPrintLoop
+                        
+
+ueHandler e = do {putStrLn "unrecognized command"; return $ Left ()}
+shellIntHandler = Catch (return ())
+cmdIntHandler = Catch (return () >> readEvalPrintLoop)
 
 callbackWrapper :: IO () -> EL.Callback
 callbackWrapper f = \_ _ -> f >> return 0
 
+{- 
+run a command
+-}
+execCmd :: Command -> IO (Either () ThreadId)
+execCmd (Pipeline redirIn [] redirOut fgbg) = return $ Left ()
+execCmd (Pipeline redirIn inv redirOut Fg) = do 
+                                               runIO inv;
+                                               tid <- myThreadId
+                                               return $ Right tid
+execCmd (Pipeline redirIn inv redirOut Bg) = do
+                                               tid <- forkIO (do {runIO inv})
+                                               return $ Right tid
 putEmpty :: IO ()
 putEmpty = putStrLn ""
 
