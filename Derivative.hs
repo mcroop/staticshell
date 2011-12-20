@@ -52,8 +52,8 @@ makeWS '\t' = WS
 makeWS c    = Char c
 
 derivative :: (Char -> Bool) -> ArgType -> ArgType
-derivative f ATInt            = ATFail --TODO
-derivative f ATString         = ATFail --TODO
+derivative f ATInt            = if (any f "0123456789") then atMaybe ATInt else ATFail
+derivative f ATString         = if (not (f ' ')) then atMaybe ATString else ATEmptyStr
 derivative f ATFile           = derivative f ATString --TODO
 derivative f (ATToken "")     = ATFail
 derivative f (ATToken (c:"")) = bool2arg (f c)
