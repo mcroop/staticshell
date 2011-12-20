@@ -115,8 +115,9 @@ tabComplete = do
   bufFull <- getLineBuffer
   point <- getPoint
   let buf = take point bufFull
-  --stuffStr "[]"
-  putStrLn $ docs Page $ fst.upToWS $ derivatives schema $ doTokenizeWithEndWS buf
+  let derived = derivatives schema $ doTokenizeWithEndWS buf
+  stuffStr $ requiredNextString derived
+  putStrLn $ docs Page $ fst.upToWS $ derived
   EL.redisplay
 
 main :: IO ()
