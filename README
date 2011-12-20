@@ -1,7 +1,9 @@
 Matthew Croop (mcroop) and Alex Marple (amarple)
 
 Although the shell does build using ghc --make Main.hs, properly
-managing threads only works properly using runghc.
+managing output to the terminal from background threads only works
+properly using runghc.
+
 "runghc Main.hs" should work.
 
 
@@ -20,12 +22,18 @@ to transform parsed tokens into Commands
 
 Completion.hs
 =============
+Here we define the infrastructure for building up tree-like completions
 
 Derivative.hs
 =============
+Here we define a derivative parser for Commands
 
 Schema.hs
 =========
+Here we define the schema for Commands, which consists of a few basic
+shell conventions (filenames, pipes, redirects) as well as a few
+example programs (echo, cat, QQ, diff) and their associated ArgType 
+structures
 
 Main.hs
 =======
@@ -36,7 +44,8 @@ Libraries we depend on:
 HSH (HSH-2.0.3)
 Text.PrettyPrint.HughesPJ
 
-System.Console.Readline
+System.Console.Readline / System.Console.Editline.Readline
+
 Control.Concurrent
 Data.String.Utils
 Data.Tree
