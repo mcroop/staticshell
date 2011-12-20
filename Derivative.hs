@@ -49,9 +49,11 @@ derivative f (ATSeq (t:[]))   = derivative f t
 derivative f (ATSeq (t:ts))   = atsum [cons (derivative f t) (ATSeq ts),
                                        cons (bool2arg $ nullable t) 
                                             (derivative f (ATSeq ts))]
-derivative f (ATDocumented arg help) = ATDocumented (derivative f arg) help
-derivative _ ATEmptyStr              = ATFail
-derivative _ ATFail                  = ATFail
+derivative f (ATDocumented ATEmptyStr _) = ATFail
+derivative f (ATDocumented ATFail _)     = ATFail
+derivative f (ATDocumented arg help)     = ATDocumented (derivative f arg) help
+derivative _ ATEmptyStr                  = ATFail
+derivative _ ATFail                      = ATFail
 
 derivativeWRTChar :: CharWS -> ArgType -> ArgType
 derivativeWRTChar a = derivative (\c -> a == (makeWS c))
@@ -81,6 +83,8 @@ upToWS (ATList a) = case (upToWS a) of
   (a', True) -> (a', False)
   (a', False) -> (ATList a, False)
 upToWS (ATSet a) = upToWS (ATList (ATEither a))
+upToWS (ATDocumented ATEmptyStr _) = upToWS ATEmptyStr
+upToWS (ATDocumented ATFail _) = upToWS ATFail
 upToWS (ATDocumented a s) = (ATDocumented (fst res) s, snd res) where
   res = upToWS a
 upToWS ATEmptyStr = (ATEmptyStr, False)
