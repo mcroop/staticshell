@@ -23,6 +23,7 @@ schema = ATEither [
       ATDocumented (ATToken "-u ") "Disable output buffering",
       ATDocumented (ATToken "-v ") "Display non-printing characters"],
     ATList ATFile]) "Concatenate and print files",
+  ATSeq [ATToken "QQ ", ATInt, ATString, ATInt, ATString],
   ATDocumented (ATSeq [
     ATToken "diff ",
     ATSet [
@@ -39,5 +40,5 @@ schema = ATEither [
                                      tokWS]])
                     "Output NUM (default 3) lines of unified context."
     ],
-    ATList ATFile]) "Write arguments to the standard output"
+    ATList ATFile]) "Compare files line by line"
   ]

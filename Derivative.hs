@@ -16,11 +16,6 @@ nullable (ATList arg) = True
 nullable (ATDocumented arg _) = nullable arg
 nullable _ = False
 
-remdoc :: ArgType -> ArgType
-remdoc (ATDocumented ATFail _) = ATFail
-remdoc (ATDocumented ATEmptyStr _) = ATEmptyStr
-remdoc x = x
-
 cons :: ArgType -> ArgType -> ArgType
 cons x y = cons' (remdoc x) (remdoc y) where
   cons' ATEmptyStr x          = x
@@ -32,18 +27,6 @@ cons x y = cons' (remdoc x) (remdoc y) where
   cons' a          (ATSeq b)  = ATSeq (a : b)
   cons' a          b          = ATSeq [a, b]
 
-atplus :: ArgType -> ArgType -> ArgType
-atplus x y = atplus' (remdoc x) (remdoc y) where
-  atplus' ATFail       x            = x
-  atplus' x            ATFail       = x
-  atplus' (ATEither a) (ATEither b) = ATEither (a ++ b)
-  atplus' (ATEither a) b            = ATEither (a ++ [b])
-  atplus' a            (ATEither b) = ATEither (a : b)
-  atplus' a            b            = ATEither [a, b]
-
-atsum :: [ArgType] -> ArgType
-atsum = foldl atplus ATFail
-
 data CharWS = Char Char | WS deriving Eq
 
 makeWS :: Char -> CharWS
@@ -52,8 +35,8 @@ makeWS '\t' = WS
 makeWS c    = Char c
 
 derivative :: (Char -> Bool) -> ArgType -> ArgType
-derivative f ATInt            = ATFail --TODO
-derivative f ATString         = ATFail --TODO
+derivative f ATInt            = if (any f "0123456789") then atMaybe ATInt else ATFail
+derivative f ATString         = if (not (f ' ')) then atMaybe ATString else ATEmptyStr
 derivative f ATFile           = derivative f ATString --TODO
 derivative f (ATToken "")     = ATFail
 derivative f (ATToken (c:"")) = bool2arg (f c)
@@ -87,7 +70,7 @@ upToWS ATString = (ATString, True)
 upToWS ATFile = (ATFile, True)
 upToWS (ATToken t) = if (any (==' ') t) then
   (ATToken (head $ (splitWs t) ++ [""]), True) else (ATToken t, False)
-upToWS (ATEither args) = (ATEither (map fst res), any id (map snd res)) where
+upToWS (ATEither args) = (atsum (map fst res), any id (map snd res)) where
   res = map upToWS args
 upToWS (ATSeq []) = (ATEmptyStr, False)
 upToWS (ATSeq (a:as)) = case (upToWS a) of
@@ -95,7 +78,7 @@ upToWS (ATSeq (a:as)) = case (upToWS a) of
   (a', False) -> (cons a' rest, rest_res) where
     (rest, rest_res) = upToWS (ATSeq as)
 upToWS (ATList a) = case (upToWS a) of
-  (a', True) -> (a', True)
+  (a', True) -> (a', False)
   (a', False) -> (ATList a, False)
 upToWS (ATSet a) = upToWS (ATList (ATEither a))
 upToWS (ATDocumented a s) = (ATDocumented (fst res) s, snd res) where
