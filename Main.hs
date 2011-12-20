@@ -15,7 +15,16 @@ import Completion
 import Derivative
 import Schema
 
+{-
+Issue a prompt and respond to input.
 
+Shell commands will be executed as long as they are valid
+Basic fg/bg is included (threads can either be fg (they control
+terminal input until they exit) or bg (they can write to the
+terminal but do not monopolize input
+SIGINT will kill all running jobs but will not kill the shell
+"exit" will quit the shell
+-}
 readEvalPrintLoop :: IO ()
 readEvalPrintLoop = do
   installHandler sigINT shellIntHandler Nothing
@@ -23,20 +32,21 @@ readEvalPrintLoop = do
   case maybeLine of 
     Nothing     -> return ()
     Just "exit" -> return ()
-    Just line -> do EL.addHistory line
-                    eitherTid <- (execCmd $ buildCmd line) `catch` ueHandler 
-                    tid <- case eitherTid of
-                      Left () -> myThreadId
-                      Right tid' -> do 
-                                      installHandler sigINT cmdIntHandler Nothing
-                                      return tid'
-                    putStrLn $ "ThreadId: " ++ (show tid)
-                    readEvalPrintLoop
+    Just line -> do 
+      EL.addHistory line
+      eitherTid <- (execCmd $ buildCmd line) `catch` ueHandler 
+      tid <- case eitherTid of
+        Left () -> myThreadId
+        Right tid' -> do 
+          installHandler sigINT cmdIntHandler Nothing
+          return tid'
+      putStrLn $ "ThreadId: " ++ (show tid)
+      readEvalPrintLoop
                         
-
-ueHandler e = do {putStrLn "unrecognized command"; return $ Left ()}
+{- exception handlers -}
+ueHandler e     = do {putStrLn "unrecognized command"; return $ Left ()}
 shellIntHandler = Catch (return ())
-cmdIntHandler = Catch (return () >> readEvalPrintLoop)
+cmdIntHandler   = Catch (return () >> readEvalPrintLoop)
 
 callbackWrapper :: IO () -> EL.Callback
 callbackWrapper f = \_ _ -> f >> return 0
@@ -46,13 +56,13 @@ run a command
 -}
 execCmd :: Command -> IO (Either () ThreadId)
 execCmd (Pipeline redirIn [] redirOut fgbg) = return $ Left ()
-execCmd (Pipeline redirIn inv redirOut Fg) = do 
-                                               runIO inv;
-                                               tid <- myThreadId
-                                               return $ Right tid
-execCmd (Pipeline redirIn inv redirOut Bg) = do
-                                               tid <- forkIO (do {runIO inv})
-                                               return $ Right tid
+execCmd (Pipeline redirIn inv redirOut Fg)  = do 
+                                                runIO inv;
+                                                tid <- myThreadId
+                                                return $ Right tid
+execCmd (Pipeline redirIn inv redirOut Bg)  = do
+                                                tid <- forkIO (do {runIO inv})
+                                                return $ Right tid
 putEmpty :: IO ()
 putEmpty = putStrLn ""
 

@@ -1,1 +1,47 @@
-Requires editline (run `cabal install editline`)
+Matthew Croop (mcroop) and Alex Marple (amarple)
+
+Although the shell does build using ghc --make Main.hs, properly
+managing threads only works properly using runghc.
+"runghc Main.hs" should work.
+
+
+Included Files:
+
+Command.hs
+==========
+Here we define the types we use to deal with Commands.  ArgType is
+meant to represent the syntax of possible command completions, and
+Command is intended to represent full commands, ready for execution
+
+CmdParser.hs
+============
+Here we define a tokenizer for basic shell input and a function
+to transform parsed tokens into Commands
+
+Completion.hs
+=============
+
+Derivative.hs
+=============
+
+Schema.hs
+=========
+
+Main.hs
+=======
+Here we define the main loop, which is just a shell prompt
+
+Libraries we depend on:
+
+HSH (HSH-2.0.3)
+Text.PrettyPrint.HughesPJ
+
+System.Console.Readline
+Control.Concurrent
+Data.String.Utils
+Data.Tree
+Data.List
+Data.List.Utils
+Data.String.Utils
+Control.Concurrent
+System.Posix.Signals

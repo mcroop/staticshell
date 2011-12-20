@@ -23,23 +23,23 @@ remdoc x = x
 
 cons :: ArgType -> ArgType -> ArgType
 cons x y = cons' (remdoc x) (remdoc y) where
-  cons' ATEmptyStr x = x
-  cons' x ATEmptyStr = x
-  cons' ATFail x = ATFail
-  cons' x ATFail = ATFail
-  cons' (ATSeq a) (ATSeq b) = ATSeq (a ++ b)
-  cons' (ATSeq a) b = ATSeq (a ++ [b])
-  cons' a (ATSeq b) = ATSeq (a : b)
-  cons' a b = ATSeq [a, b]
+  cons' ATEmptyStr x          = x
+  cons' x          ATEmptyStr = x
+  cons' ATFail     x          = ATFail
+  cons' x          ATFail     = ATFail
+  cons' (ATSeq a)  (ATSeq b)  = ATSeq (a ++ b)
+  cons' (ATSeq a)  b          = ATSeq (a ++ [b])
+  cons' a          (ATSeq b)  = ATSeq (a : b)
+  cons' a          b          = ATSeq [a, b]
 
 atplus :: ArgType -> ArgType -> ArgType
 atplus x y = atplus' (remdoc x) (remdoc y) where
-  atplus' ATFail x = x
-  atplus' x ATFail = x
+  atplus' ATFail       x            = x
+  atplus' x            ATFail       = x
   atplus' (ATEither a) (ATEither b) = ATEither (a ++ b)
-  atplus' (ATEither a) b = ATEither (a ++ [b])
-  atplus' a (ATEither b) = ATEither (a : b)
-  atplus' a b = ATEither [a, b]
+  atplus' (ATEither a) b            = ATEither (a ++ [b])
+  atplus' a            (ATEither b) = ATEither (a : b)
+  atplus' a            b            = ATEither [a, b]
 
 atsum :: [ArgType] -> ArgType
 atsum = foldl atplus ATFail
@@ -47,27 +47,28 @@ atsum = foldl atplus ATFail
 data CharWS = Char Char | WS deriving Eq
 
 makeWS :: Char -> CharWS
-makeWS ' ' = WS
+makeWS ' '  = WS
 makeWS '\t' = WS
-makeWS c = Char c
+makeWS c    = Char c
 
 derivative :: (Char -> Bool) -> ArgType -> ArgType
-derivative f ATInt = ATFail --TODO
-derivative f ATString = ATFail --TODO
-derivative f ATFile = derivative f ATString --TODO
-derivative f (ATToken "") = ATFail
+derivative f ATInt            = ATFail --TODO
+derivative f ATString         = ATFail --TODO
+derivative f ATFile           = derivative f ATString --TODO
+derivative f (ATToken "")     = ATFail
 derivative f (ATToken (c:"")) = bool2arg (f c)
 derivative f (ATToken (c:cs)) = if (f c) then ATToken cs else ATFail
-derivative f (ATEither args) = atsum (map (derivative f) args)
-derivative f (ATSet args) = derivative f (ATList (ATEither args)) --TODO
-derivative f (ATList arg) = cons (derivative f arg) (ATList arg)
-derivative f (ATSeq []) = ATFail
-derivative f (ATSeq (t:[])) = derivative f t
-derivative f (ATSeq (t:ts)) = atsum [cons (derivative f t) (ATSeq ts),
-                                     cons (bool2arg $ nullable t) (derivative f (ATSeq ts))]
+derivative f (ATEither args)  = atsum (map (derivative f) args)
+derivative f (ATSet args)     = derivative f (ATList (ATEither args)) --TODO
+derivative f (ATList arg)     = cons (derivative f arg) (ATList arg)
+derivative f (ATSeq [])       = ATFail
+derivative f (ATSeq (t:[]))   = derivative f t
+derivative f (ATSeq (t:ts))   = atsum [cons (derivative f t) (ATSeq ts),
+                                       cons (bool2arg $ nullable t) 
+                                            (derivative f (ATSeq ts))]
 derivative f (ATDocumented arg help) = ATDocumented (derivative f arg) help
-derivative _ ATEmptyStr = ATFail
-derivative _ ATFail = ATFail
+derivative _ ATEmptyStr              = ATFail
+derivative _ ATFail                  = ATFail
 
 derivativeWRTChar :: CharWS -> ArgType -> ArgType
 derivativeWRTChar a = derivative (\c -> a == (makeWS c))
@@ -76,5 +77,6 @@ derivativeNonWS :: ArgType -> ArgType
 derivativeNonWS = derivative (\c -> WS /= (makeWS c))
 
 derivatives :: ArgType -> [String] -> ArgType
-derivatives arg s = foldl (flip derivativeWRTChar) arg $ join [WS] (map (map Char) s)
+derivatives arg s = foldl (flip derivativeWRTChar) arg $ 
+                      join [WS] (map (map Char) s)
 

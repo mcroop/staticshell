@@ -1,7 +1,8 @@
 module Command where
 
 data ArgType = ATInt | ATString | ATFile
-             | ATToken String -- require the token, return (). the token should end in " " to require whitespace
+             | ATToken String -- require the token, return (). the token 
+                              -- should end in " " to require whitespace
              | ATEither [ArgType]
              | ATSet [ArgType] -- options in any order
              | ATList ArgType

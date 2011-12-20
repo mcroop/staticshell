@@ -37,20 +37,28 @@ buildCmd :: String -> Command
 buildCmd s = pipeSplit
   where
     toks' = doTokenize s
-    lTok | toks' == [] = ""
-         | otherwise   = last toks'
-    toks | lTok == "&" = init toks'
-         | otherwise = toks'
-    fb | lTok == "&" = Bg
-       | otherwise   = Fg
+    lTok  | toks' == [] = ""
+          | otherwise   = last toks'
+    toks  | lTok == "&" = init toks'
+          | otherwise   = toks'
+    fb    | lTok == "&" = Bg
+          | otherwise   = Fg
     pipeSplit = foldl aux (Pipeline Nothing [] Nothing fb) toks
     aux (Pipeline i invs o fgbg) x 
       | x == "|"  = Pipeline i (invs ++ [(Invocation "" [])]) o fgbg
       | otherwise = case invs of
         [] -> Pipeline i [(Invocation x [])] o fgbg
         _  -> case (last invs) of
-          (Invocation "" as) -> Pipeline i ((init invs) ++ [(Invocation x as)]) o fgbg
-          (Invocation c  as) -> Pipeline i ((init invs) ++ [(Invocation c (as ++ [x]))]) o fgbg
+          (Invocation "" as) -> Pipeline 
+                                  i 
+                                  ((init invs) ++ [(Invocation x as)]) 
+                                  o 
+                                  fgbg
+          (Invocation c  as) -> Pipeline 
+                                  i 
+                                  ((init invs) ++ [(Invocation c (as ++ [x]))]) 
+                                  o 
+                                  fgbg
 
 {- 
 an accumulator-style tokenizing helper function
@@ -58,37 +66,39 @@ an accumulator-style tokenizing helper function
 meant to be called through doTokenize 
 -}
 tokenize' :: Maybe Char -> -- previous character
-            Maybe Char -> -- current character
-            Bool ->       -- quoted
-            String ->     -- current token
-            [String] ->   -- accumulated tokens
-            String ->     -- remaining input
-            [String]      -- result
-tokenize' pr Nothing True tok toks []      = undefined
-tokenize' pr Nothing _    tok toks []      = if tok == "" then toks else toks ++ [tok]
-tokenize' pr cr      qu   tok toks (r:rem) = tokenize' pr' cr' qu' tok' toks' rem'
-  where
-    pr'   = if pr == (Just '\\') && cr == (Just '\\') 
-              then (Just 'a') 
-            else cr
-    cr'   = if rem == [] 
-              then Nothing 
-            else 
-              Just r
-    qu'   = if cr == (Just '"') && not (pr == (Just '\\'))
-              then not qu
-            else qu
-    tok'  = if (cr == (Just '"') && not (pr == (Just '\\'))) || 
-               (cr == (Just '\\') && not (pr == (Just '\\')))
-              then tok 
-            else if not qu && cr == (Just ' ') 
-                   then "" 
-                 else tok ++ [fromJust cr]
-    toks' = if (cr == (Just ' ') && not qu ) || rem == [] 
-              then if tok == "" then toks else toks ++ [tok] 
-            else
-              toks
-    rem'  = rem
+             Maybe Char -> -- current character
+             Bool ->       -- quoted
+             String ->     -- current token
+             [String] ->   -- accumulated tokens
+             String ->     -- remaining input
+             [String]      -- result
+tokenize' pr Nothing True tok toks [] = undefined -- we shouldn't hit this
+tokenize' pr Nothing _    tok toks []      
+  = if tok == "" then toks else toks ++ [tok]
+tokenize' pr cr      qu   tok toks (r:rem) 
+  = tokenize' pr' cr' qu' tok' toks' rem'
+    where
+      pr'   = if pr == (Just '\\') && cr == (Just '\\') 
+                then (Just 'a') 
+              else cr
+      cr'   = if rem == [] 
+                then Nothing 
+              else 
+                Just r
+      qu'   = if cr == (Just '"') && not (pr == (Just '\\'))
+                then not qu
+              else qu
+      tok'  = if (cr == (Just '"') && not (pr == (Just '\\'))) || 
+                 (cr == (Just '\\') && not (pr == (Just '\\')))
+                then tok 
+              else if not qu && cr == (Just ' ') 
+                     then "" 
+                   else tok ++ [fromJust cr]
+      toks' = if (cr == (Just ' ') && not qu ) || rem == [] 
+                then if tok == "" then toks else toks ++ [tok] 
+              else
+                toks
+      rem'  = rem
 
 {- 
 tokenize a string, triming whitespace.
