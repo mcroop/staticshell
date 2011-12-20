@@ -74,7 +74,7 @@ upToWS ATString = (ATString, True)
 upToWS ATFile = (ATFile, True)
 upToWS (ATToken t) = if (any (==' ') t) then
   (ATToken (head $ (splitWs t) ++ [""]), True) else (ATToken t, False)
-upToWS (ATEither args) = (atsum (map fst res), any id (map snd res)) where
+upToWS (ATEither args) = (atsum (map fst res), all id (map snd res)) where
   res = map upToWS args
 upToWS (ATSeq []) = (ATEmptyStr, False)
 upToWS (ATSeq (a:as)) = case (upToWS a) of
