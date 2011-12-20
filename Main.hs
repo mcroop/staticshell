@@ -2,12 +2,14 @@
 
 module Main where
 
+--import System.Console.Editline.Readline as EL
+import System.Console.Readline as EL
+
+
 import Data.List
 -- import Data.String.Utils
 import Control.Concurrent
 
---import System.Console.Editline.Readline as EL
-import System.Console.Readline as EL
 import System.Posix.Signals
 import CmdParser
 import Command
@@ -138,7 +140,7 @@ tabComplete = do
     else return $ requiredNextString derived
   stuffStr prefix
   EL.redisplay
-  EL.resetLineState
+  EL.resetLineState -- readline-only; remove this line if you're using editline;
 
 main :: IO ()
 main = do

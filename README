@@ -1,11 +1,16 @@
 Matthew Croop (mcroop) and Alex Marple (amarple)
 
-Although the shell does build using ghc --make Main.hs, properly
+The shell requires either Editline or Readline; it is currently
+configured to use readline, but can be switched to editline by
+switching the import at the top of Main.hs and removing
+"EL.resetLineState".
+
+Build with ghc --make Main.hs; run with ./Main.
+
+Note: although the shell does build using ghc --make Main.hs, properly
 managing output to the terminal from background threads only works
-properly using runghc.
-
-"runghc Main.hs" should work.
-
+properly using `runghc Main.hs`, though that may have other issues
+depending on system configuration.
 
 Included Files:
 
