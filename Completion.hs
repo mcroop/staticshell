@@ -66,15 +66,15 @@ unify :: Eq a => [a] -> Maybe a
 unify [] = Nothing
 unify (a:as) = if all (a==) as then Just a else Nothing
 
-data AutocompletionChar = DefiniteChar Char
-                        | StopCompletion
-                        | ContinueCompletion
+data AutocompletionChar = DefiniteChar Char  -- definitely need this character
+                        | StopCompletion     -- don't know, should stop
+                        | ContinueCompletion -- don't care
                         | FilenameCompletion
   deriving (Eq, Show)
   
 
 
-
+-- What is the next character that must be typed by the user?
 requiredNextChar :: ArgType -> AutocompletionChar
 requiredNextChar (ATToken (x:xs)) = DefiniteChar x
 requiredNextChar (ATEither args) = case filter (ContinueCompletion/=) $ map requiredNextChar args of
@@ -85,6 +85,7 @@ requiredNextChar (ATDocumented arg s) = requiredNextChar arg
 requiredNextChar ATFile = FilenameCompletion
 requiredNextChar _ = ContinueCompletion
 
+-- What is the next string that must be typed by the user?
 requiredNextString :: ArgType -> String
 requiredNextString arg = case (requiredNextChar arg) of
   DefiniteChar c -> c : (requiredNextString $ derivativeWRTChar (makeWS c) arg)
