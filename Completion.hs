@@ -48,13 +48,19 @@ docTree (ATDocumented arg s) = Node s [docTree arg]
 docTree (ATEmptyStr)         = Node "" []
 docTree (ATFail)             = Node "" []
 
+elideEmptyHeaders :: Tree String -> Tree String
+elideEmptyHeaders (Node "" [c]) = elideEmptyHeaders c
+elideEmptyHeaders (Node s cs) = Node s $ concatMap aux cs where
+  aux (Node "" cs') = concatMap aux cs'
+  aux n = [elideEmptyHeaders n]
+
 printTree :: (Tree String) -> String
 printTree t = sjoin "\n" (filter ((/="").strip) (aux 12 t)) where
   aux (-1)  _           = [] :: [String]
   aux depth (Node n cs) = n : (map ("  "++) (concatMap (aux (depth-1)) cs))
  
 
-docs _ arg = printTree (docTree arg)
+docs _ = printTree . elideEmptyHeaders . docTree
 
 unify :: Eq a => [a] -> Maybe a
 unify [] = Nothing
