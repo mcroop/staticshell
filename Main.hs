@@ -2,12 +2,12 @@
 
 module Main where
 
-import Data.List
-import Data.String.Utils
+-- import Data.List
+-- import Data.String.Utils
 import Control.Concurrent
 
-import System.Console.Editline.Readline as EL
---import System.Console.Readline as EL
+--import System.Console.Editline.Readline as EL
+import System.Console.Readline as EL
 import System.Posix.Signals
 import CmdParser
 import Command
@@ -28,7 +28,7 @@ SIGINT will kill all running jobs but will not kill the shell
 -}
 readEvalPrintLoop :: IO ()
 readEvalPrintLoop = do
-  installHandler sigINT shellIntHandler Nothing
+  _ <- installHandler sigINT shellIntHandler Nothing
   maybeLine <- EL.readline ">> "
   case maybeLine of 
     Nothing     -> return ()
@@ -39,14 +39,21 @@ readEvalPrintLoop = do
       tid <- case eitherTid of
         Left () -> myThreadId
         Right tid' -> do 
-          installHandler sigINT cmdIntHandler Nothing
+          _ <- installHandler sigINT cmdIntHandler Nothing
           return tid'
       putStrLn $ "ThreadId: " ++ (show tid)
       readEvalPrintLoop
                         
 {- exception handlers -}
-ueHandler e     = do {putStrLn "unrecognized command"; return $ Left ()}
+ueHandler :: IOError -> IO (Either () ThreadId)
+ueHandler e     = do 
+                    putStrLn $ "Exception raised: " ++ (show e)
+                    return $ Left ()
+
+shellIntHandler :: Handler
 shellIntHandler = Catch (return ())
+
+cmdIntHandler :: Handler
 cmdIntHandler   = Catch (return () >> readEvalPrintLoop)
 
 callbackWrapper :: IO () -> EL.Callback
@@ -59,7 +66,7 @@ it's still pretty ugly right now, the fix is a ShellCommand instance
 for sequences of ShellCommands that simply pipes them all together
 -}
 execCmd :: Command -> IO (Either () ThreadId)
-execCmd (Pipeline redirIn [] redirOut fgbg) = return $ Left ()
+execCmd (Pipeline _       []  _       _) = return $ Left ()
 execCmd (Pipeline Nothing inv Nothing Fg)  
   = do 
       runIO inv
@@ -80,7 +87,7 @@ execCmd (Pipeline (Just i) inv (Just o) Fg)
       runIO $ ("cat", [i]) -|- inv -|- (catTo o)
       tid <- myThreadId
       return $ Right tid
-execCmd (Pipeline redirIn inv redirOut Bg)  
+execCmd (Pipeline Nothing inv Nothing Bg)  
   = do
       tid <- forkIO (do {runIO inv})
       return $ Right tid
@@ -122,7 +129,7 @@ tabComplete = do
 
 main :: IO ()
 main = do
-  EL.bindKey '!' (\i c -> do {return 0}) -- I'm not sure why this is necessary
+  EL.bindKey '!' (\_ _ -> do {return 0}) -- I'm not sure why this is necessary
   EL.addDefun "ss-tab" (callbackWrapper tabComplete) (Just '\t')
   readEvalPrintLoop
 
