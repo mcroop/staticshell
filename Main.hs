@@ -11,6 +11,9 @@ import System.Posix.Signals
 import CmdParser
 import Command
 import HSH
+import Completion
+import Derivative
+import Schema
 
 
 readEvalPrintLoop :: IO ()
@@ -62,10 +65,8 @@ tabComplete = do
   bufFull <- getLineBuffer
   point <- getPoint
   let buf = take point bufFull
-  putStrLn $ "Help for the function '" ++ buf ++ "'."
-  putEmpty
-  stuffStr "[]"
-  putStrLn "completion 1\tcompletion 2"
+  --stuffStr "[]"
+  putStrLn $ docs Page $ derivatives schema $ doTokenize buf
   EL.redisplay
 
 main :: IO ()
