@@ -51,23 +51,30 @@ makeWS ' ' = WS
 makeWS '\t' = WS
 makeWS c = Char c
 
-derivative :: ArgType -> CharWS -> ArgType
-derivative ATInt a = ATFail --TODO
-derivative ATString a = ATFail --TODO
-derivative ATFile a = derivative ATString a --TODO
-derivative (ATToken "") a = ATFail
-derivative (ATToken (c:"")) a = bool2arg (a == (makeWS c))
-derivative (ATToken (c:cs)) a = if a == (makeWS c) then ATToken cs else ATFail
-derivative (ATEither args) a = atsum (map (\arg -> derivative arg a) args)
-derivative (ATSet args) a = derivative (ATList (ATEither args)) a --TODO
-derivative (ATList arg) a = cons (derivative arg a) (ATList arg)
-derivative (ATSeq []) a = ATFail
-derivative (ATSeq (t:[])) a = derivative t a
-derivative (ATSeq (t:ts)) a = atsum [cons (derivative t a) (ATSeq ts),
-                                      cons (bool2arg $ nullable t) (derivative (ATSeq ts) a)]
-derivative (ATDocumented arg help) a = ATDocumented (derivative arg a) help
-derivative ATEmptyStr _ = ATFail
-derivative ATFail _ = ATFail
+derivative :: (Char -> Bool) -> ArgType -> ArgType
+derivative f ATInt = ATFail --TODO
+derivative f ATString = ATFail --TODO
+derivative f ATFile = derivative f ATString --TODO
+derivative f (ATToken "") = ATFail
+derivative f (ATToken (c:"")) = bool2arg (f c)
+derivative f (ATToken (c:cs)) = if (f c) then ATToken cs else ATFail
+derivative f (ATEither args) = atsum (map (derivative f) args)
+derivative f (ATSet args) = derivative f (ATList (ATEither args)) --TODO
+derivative f (ATList arg) = cons (derivative f arg) (ATList arg)
+derivative f (ATSeq []) = ATFail
+derivative f (ATSeq (t:[])) = derivative f t
+derivative f (ATSeq (t:ts)) = atsum [cons (derivative f t) (ATSeq ts),
+                                     cons (bool2arg $ nullable t) (derivative f (ATSeq ts))]
+derivative f (ATDocumented arg help) = ATDocumented (derivative f arg) help
+derivative _ ATEmptyStr = ATFail
+derivative _ ATFail = ATFail
+
+derivativeWRTChar :: CharWS -> ArgType -> ArgType
+derivativeWRTChar a = derivative (\c -> a == (makeWS c))
+
+derivativeNonWS :: ArgType -> ArgType
+derivativeNonWS = derivative (\c -> WS /= (makeWS c))
 
 derivatives :: ArgType -> [String] -> ArgType
-derivatives arg s = foldl derivative arg $ join [WS] (map (map Char) s)
+derivatives arg s = foldl (flip derivativeWRTChar) arg $ join [WS] (map (map Char) s)
+
