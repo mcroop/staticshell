@@ -44,7 +44,7 @@ docTree (ATEmptyStr)         = Node "" []
 docTree (ATFail)             = Node "" []
 
 printTree :: (Tree String) -> String
-printTree t = join "\n" (aux 6 t) where
+printTree t = join "\n" (filter ((/="").strip) (aux 6 t)) where
   aux (-1)  _           = [] :: [String]
   aux depth (Node n cs) = n : (map ("  "++) (concatMap (aux (depth-1)) cs))
  
