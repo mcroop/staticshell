@@ -1,5 +1,7 @@
 module Command where
 
+import Data.List
+
 data ArgType = ATInt | ATString | ATFile
              | ATToken String -- require the token, return (). the token 
                               -- should end in " " to require whitespace
@@ -15,8 +17,25 @@ data ArgType = ATInt | ATString | ATFile
 tokWS :: ArgType
 tokWS = ATToken " "
 
+remdoc :: ArgType -> ArgType
+remdoc (ATDocumented ATFail _) = ATFail
+remdoc (ATDocumented ATEmptyStr _) = ATEmptyStr
+remdoc x = x
+
 atMaybe :: ArgType -> ArgType
-atMaybe t = ATEither [ATEmptyStr, t]
+atMaybe = atplus ATEmptyStr
+
+atplus :: ArgType -> ArgType -> ArgType
+atplus x y = atplus' (remdoc x) (remdoc y) where
+  atplus' ATFail       x            = x
+  atplus' x            ATFail       = x
+  atplus' (ATEither a) (ATEither b) = ATEither $ nub (a ++ b)
+  atplus' (ATEither a) b            = ATEither $ nub (a ++ [b])
+  atplus' a            (ATEither b) = ATEither $ nub (a : b)
+  atplus' a            b            = ATEither $ nub [a, b]
+
+atsum :: [ArgType] -> ArgType
+atsum = foldl atplus ATFail
 
 data FgBg = Fg | Bg
   deriving Show

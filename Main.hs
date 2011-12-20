@@ -6,8 +6,8 @@ import Data.List
 import Data.String.Utils
 import Control.Concurrent
 
---import System.Console.Editline.Readline as EL
-import System.Console.Readline as EL
+import System.Console.Editline.Readline as EL
+--import System.Console.Readline as EL
 import System.Posix.Signals
 import CmdParser
 import Command
