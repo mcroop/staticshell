@@ -1,7 +1,7 @@
 module Derivative where
 
 import Command
-import Data.List.Utils
+import Data.String.Utils
 
 bool2arg :: Bool -> ArgType
 bool2arg True = ATEmptyStr
@@ -80,3 +80,25 @@ derivatives :: ArgType -> [String] -> ArgType
 derivatives arg s = foldl (flip derivativeWRTChar) arg $ 
                       join [WS] (map (map Char) s)
 
+upToWS :: ArgType -> (ArgType, Bool)
+
+upToWS ATInt = (ATInt, False)
+upToWS ATString = (ATString, True)
+upToWS ATFile = (ATFile, True)
+upToWS (ATToken t) = if (any (==' ') t) then
+  (ATToken (head $ (splitWs t) ++ [""]), True) else (ATToken t, False)
+upToWS (ATEither args) = (ATEither (map fst res), any id (map snd res)) where
+  res = map upToWS args
+upToWS (ATSeq []) = (ATEmptyStr, False)
+upToWS (ATSeq (a:as)) = case (upToWS a) of
+  (a', True) -> (a', True)
+  (a', False) -> (cons a' rest, rest_res) where
+    (rest, rest_res) = upToWS (ATSeq as)
+upToWS (ATList a) = case (upToWS a) of
+  (a', True) -> (a', True)
+  (a', False) -> (ATList a, False)
+upToWS (ATSet a) = upToWS (ATList (ATEither a))
+upToWS (ATDocumented a s) = (ATDocumented (fst res) s, snd res) where
+  res = upToWS a
+upToWS ATEmptyStr = (ATEmptyStr, False)
+upToWS ATFail = (ATFail, True)
