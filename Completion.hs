@@ -73,13 +73,18 @@ data AutocompletionChar = DefiniteChar Char  -- definitely need this character
   deriving (Eq, Show)
   
 
+isContinueCompl :: AutocompletionChar -> Bool
+isContinueCompl ContinueCompletion = True
+isContinueCompl FilenameCompletion = True
+isContinueCompl _ = False
 
 -- What is the next character that must be typed by the user?
 requiredNextChar :: ArgType -> AutocompletionChar
 requiredNextChar (ATToken (x:xs)) = DefiniteChar x
-requiredNextChar (ATEither args) = case filter (ContinueCompletion/=) $ map requiredNextChar args of
-  [] -> ContinueCompletion
+requiredNextChar (ATEither args) = case filter (\x -> not $ isContinueCompl x) $ nexts of
+  [] -> if any (==FilenameCompletion) nexts then FilenameCompletion else ContinueCompletion
   (a:as) -> if all (a==) as then a else StopCompletion
+  where nexts = map requiredNextChar args
 requiredNextChar (ATSeq (a:as)) = requiredNextChar a
 requiredNextChar (ATDocumented arg s) = requiredNextChar arg
 requiredNextChar ATFile = FilenameCompletion
